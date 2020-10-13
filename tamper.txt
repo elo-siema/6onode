@@ -1,0 +1,66 @@
+// ==UserScript==
+// @name     6obcy sniffer
+// @version  1
+// @grant        GM_addValueChangeListener
+// @grant        GM_setValue
+// @require http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js
+// @match      https://6obcy.org/rozmowa
+// ==/UserScript==
+
+console.log('Script starting...');
+
+var log = function(text) {
+  console.log(text);
+}
+
+var save = function(text) {
+  GM_setValue('currentMsg', text);
+}
+
+var subscribe = function() {
+ 	GM_addValueChangeListener('currentMsg', function(name, old_value, new_value, remote) {
+        if(remote) {
+            log("Received: " + new_value);
+            post(new_value);
+        }
+    });
+}
+
+var strip = function(text) {
+  return text
+    .split("Obcy: ")[1];
+}
+
+var post = function(text) {
+  //input to textbox
+  $("#box-interface-input")
+    .val(text);
+  //send
+  var button = $(".box-interface-right button");
+  setTimeout(function(){button.trigger("click")}, 1000);
+}
+
+var callback = function(mutationsList) {
+    for(var mutation of mutationsList) {
+        if (mutation.type == 'childList') {
+            var text = mutation.addedNodes[0].innerText;
+            log(text);
+            var stripped = strip(text);
+            if(stripped) {
+                save(stripped);
+            }
+        }
+    }
+}
+
+var targetNode = document.getElementById('log-dynamic');
+
+var config = { attributes: true, childList: true, subtree: true };
+
+var mo = new MutationObserver(callback);
+
+//init
+subscribe();
+mo.observe(targetNode, config);
+
+console.log('Script started');
